@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { API_BASE, GENERATE_PATH } from '../lib/api';
-import { budgetToLegacyAmount, dateRangeForRequest, normalizeLegacyItinerary } from '../lib/legacyAdapter';
+import { budgetToLegacyAmount, dateRangeForRequest } from '../lib/legacyAdapter';
 import type { GenerationStatus, Itinerary, SSEMeta, TripRequest } from '../types';
 
 interface SSEState {
@@ -18,6 +18,12 @@ const INITIAL: SSEState = {
   itinerary: null,
   error: null,
 };
+
+function parseEventBlock(block: string): { event: string; data: string } | null {
+  const event = block.match(/^event:\s*(.+)$/m)?.[1]?.trim() ?? 'message';
+  const data = block.match(/^data:\s*(.+)$/m)?.[1]?.trim();
+  return data ? { event, data } : null;
+}
 
 export function useSSEItinerary() {
   const [state, setState] = useState<SSEState>(INITIAL);
@@ -53,8 +59,47 @@ export function useSSEItinerary() {
         throw new Error(body?.message ?? body?.error ?? `HTTP ${res.status}`);
       }
 
+      const contentType = res.headers.get('content-type') ?? '';
+      let itinerary: Itinerary | null = null;
+
+      if (contentType.includes('application/json')) {
+        const payload = await res.json() as { itinerary?: Itinerary } | Itinerary;
+        if ('itinerary' in payload) itinerary = payload.itinerary ?? null;
+        else itinerary = payload as Itinerary;
+      } else {
+        if (!res.body) throw new Error('Backend returned an empty streaming response.');
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let streamDone = false;
+
+        while (!streamDone) {
+          const chunk = await reader.read();
+          buffer += decoder.decode(chunk.value ?? new Uint8Array(), { stream: !chunk.done });
+          const blocks = buffer.split('\n\n');
+          buffer = blocks.pop() ?? '';
+
+          for (const block of blocks) {
+            const event = parseEventBlock(block);
+            if (!event) continue;
+            const data = JSON.parse(event.data) as { text?: string; itinerary?: Itinerary; message?: string };
+            if (event.event === 'meta') {
+              setState((s) => ({ ...s, status: 'enriching', meta: data as SSEMeta }));
+            } else if (event.event === 'token') {
+              setState((s) => ({ ...s, status: 'streaming', tokens: s.tokens + (data.text ?? '') }));
+            } else if (event.event === 'done') {
+              itinerary = data.itinerary ?? null;
+              streamDone = true;
+            } else if (event.event === 'error') {
+              throw new Error(data.message ?? 'Backend stream failed.');
+            }
+          }
+          if (chunk.done) break;
+        }
+      }
+
+      if (!itinerary) throw new Error('Backend returned an invalid itinerary payload.');
       setState((s) => ({ ...s, status: 'parsing' }));
-      const itinerary = normalizeLegacyItinerary(await res.json(), request);
       if (timeout.current) clearTimeout(timeout.current);
       setState({
         ...INITIAL,

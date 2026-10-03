@@ -36,7 +36,7 @@ export default function Home() {
 
       <footer className="site-footer">
         <span>Powered by Gemini 1.5 Flash · RAG · Streamed via SSE · Open source</span>
-        <a href="https://github.com/Yashsh101/AI-Trip-Planner" rel="noreferrer" target="_blank">
+        <a href="https://github.com/Yashsh101/ai-trip-planner-frontend" rel="noreferrer" target="_blank">
           GitHub
         </a>
       </footer>

@@ -2,10 +2,10 @@
 
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue)
 
-> React frontend for the AI Trip Planner, built at **Google Gen AI Exchange Hackathon 2025** and rebuilt into a production-grade streaming UI.
+> React frontend for the AI Trip Planner, built at **Google Gen AI Exchange Hackathon 2025** and rebuilt into a streaming UI.
 
 **Live Demo:** add the Netlify URL after deployment  
-**Backend API:** [AI Trip Planner Backend](https://github.com/Yashsh101/AI-Trip-Planner-Backend)
+**Backend API:** [AI Trip Planner Backend](https://github.com/Yashsh101/ai-trip-planner-backend)
 
 ## What this UI does that generic AI apps do not
 
@@ -21,14 +21,14 @@ React 18 · TypeScript strict · Vite · React Query · Google Maps JS API
 ## Local dev
 
 ```bash
-git clone https://github.com/Yashsh101/AI-Trip-Planner
-cd ai-planner-frontend
+git clone https://github.com/Yashsh101/ai-trip-planner-frontend
+cd ai-trip-planner-frontend
 cp .env.example .env
 npm install
 npm run dev
 ```
 
-Set `VITE_API_BASE_URL` to the deployed backend URL before testing generation.
+Set `VITE_API_BASE_URL` to the backend URL before testing generation. The default path is the current backend contract: `POST /api/v1/itinerary/generate` (SSE, with cached JSON responses also supported).
 
 ## Architecture note
 
