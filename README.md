@@ -1,35 +1,75 @@
 # AI Trip Planner — Frontend
 
-![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue)
+A React 18 + TypeScript/Vite client for the AI Trip Planner backend. It presents streaming itinerary generation, explicit connection/parsing/error states, RAG indicators, and shareable saved trips.
 
-> React frontend for the AI Trip Planner, built at **Google Gen AI Exchange Hackathon 2025** and rebuilt into a streaming UI.
+## Demo / status
 
-**Live Demo:** add the Netlify URL after deployment  
-**Backend API:** [AI Trip Planner Backend](https://github.com/Yashsh101/ai-trip-planner-backend)
+A public frontend URL is **pending verification**; the README intentionally does not claim a live demo. The backend repository is [ai-trip-planner-backend](https://github.com/Yashsh101/ai-trip-planner-backend).
 
-## What this UI does that generic AI apps do not
+## Architecture
 
-- **Real-time streaming:** itinerary tokens appear as Gemini generates them.
-- **RAG visibility:** activities show a `RAG` badge when grounded in retrieved knowledge.
-- **Live status machine:** connecting, enriching, streaming, parsing, done, and error states are explicit.
-- **Shareable trips:** saved itineraries load from `/trip/:id`.
+```mermaid
+flowchart LR
+  A[Trip form] --> B[API client]
+  B --> C[POST /api/v1/itinerary/generate]
+  C --> D[SSE parser]
+  D --> E[State machine: connect / enrich / stream / parse / done / error]
+  E --> F[Itinerary UI + RAG badges]
+  F --> G[/trip/:id saved itinerary]
+```
 
-## Stack
+The SSE contract is implemented in `src/hooks/useSSEItinerary.ts` with `fetch`, `ReadableStream`, and `TextDecoder`. Cached JSON responses from the backend are also normalized.
 
-React 18 · TypeScript strict · Vite · React Query · Google Maps JS API
+## Quickstart
 
-## Local dev
+### 1. Clone and install
 
 ```bash
-git clone https://github.com/Yashsh101/ai-trip-planner-frontend
+git clone https://github.com/Yashsh101/ai-trip-planner-frontend.git
 cd ai-trip-planner-frontend
+npm ci
+```
+
+### 2. Configure
+
+```bash
 cp .env.example .env
-npm install
+# Set VITE_API_BASE_URL to the backend origin when services are separate.
+```
+
+`VITE_GENERATE_PATH` defaults to `/api/v1/itinerary/generate`. Do not put private backend or provider keys in Vite variables; browser-exposed variables are public.
+
+### 3. Run
+
+```bash
 npm run dev
 ```
 
-Set `VITE_API_BASE_URL` to the backend URL before testing generation. The default path is the current backend contract: `POST /api/v1/itinerary/generate` (SSE, with cached JSON responses also supported).
+Open the Vite URL shown in the terminal.
 
-## Architecture note
+## Verification
 
-The SSE stream is consumed by `src/hooks/useSSEItinerary.ts`, a custom hook with a clear state machine. It uses `fetch`, a `ReadableStream` reader, and `TextDecoder`, so there is no separate SSE client library.
+```bash
+npm ci
+npm run lint
+npm run type-check
+npm run build
+```
+
+CI runs the same checks and a Docker build. No live itinerary generation is claimed in this repository because it requires configured provider credentials and can consume quota.
+
+## Backend contract
+
+The selected backend route is `POST /api/v1/itinerary/generate`. It returns either cached JSON (`{ "itinerary": ... }`) or SSE events for metadata, tokens, completion, and errors. The frontend also supports `/trip/:id` lookup through the current backend trip route.
+
+## Limitations and roadmap
+
+- No verified public frontend deployment URL is recorded.
+- End-to-end generation requires a running backend and provider credentials.
+- Add a contract fixture covering SSE meta/token/done/error events.
+- Add browser-level tests for timeout, malformed events, and saved-trip loading.
+- Add a verified screenshot or GIF only after deployment and current UI behavior are checked.
+
+## License
+
+MIT — see [`LICENSE`](LICENSE).
